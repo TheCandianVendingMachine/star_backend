@@ -1,0 +1,54 @@
+name: Test Runner
+
+on:
+  pull_request:
+    types: [ opened, edited, synchronize ]
+  push:
+    branches:
+      - main
+
+jobs:
+  runner:
+    runs-on: ubuntu-latest
+        # Service containers to run with `runner-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres:16.9-bullseye
+        # Provide the password for postgres
+        env:
+          POSTGRES_DB: testing_db
+          POSTGRES_USER: tester
+          POSTGRES_PASSWORD: tester
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml" 
+      - name: install project
+        run: uv sync --locked --extra tests --dev
+      - name: run tests
+        run: |
+          mkdir bin
+          touch bin/hemtt
+          chmod +x bin/hemtt
+          touch bin/_server_manage.ps1
+          chmod +x bin/_server_manage.ps1
+          touch bin/a3sb
+          chmod +x bin/a3sb
+          cp tests/test_config.kv conf.kv
+          uv run pytest --cov=bw
+      
