@@ -18,9 +18,9 @@ class WebResponse(Response):
             if self.exception is not None:
                 raise self.exception
             else:
-                from star.error import BwServerError
+                from star.error import ServerError
 
-                raise BwServerError(status=self.status_code, message='An error occurred for unknown reasons.')
+                raise ServerError(status=self.status_code, message='An error occurred for unknown reasons.')
         return self
 
     def __init__(self, status: int, headers: dict = {}, response='', from_exception: Exception | None = None, **kwargs):  # ty: ignore[invalid-type-form]

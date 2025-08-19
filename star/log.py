@@ -4,11 +4,7 @@ from star.environment import ENVIRONMENT, Local
 import os
 from typing import Any
 
-PRODUCTION_LOG_CONFIG = {
-    'root': 'INFO',
-    'quart.app': 'INFO',
-    'star.cache': 'INFO'
-}
+PRODUCTION_LOG_CONFIG = {'root': 'INFO', 'quart.app': 'INFO', 'star.cache': 'INFO'}
 
 
 def config() -> dict[str, Any]:

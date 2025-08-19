@@ -2,13 +2,13 @@ from sqlalchemy import UUID as SqlUUID, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 from uuid import UUID, uuid4
 import datetime
-from typing import Self
 
 from star.models import Base
 from star.transcribe.state import VideoState
 
 NAME_LENGTH = 256
-PATH_LENGTH = 64
+PATH_LENGTH = 96
+
 
 class Video(Base):
     __tablename__ = 'videos'

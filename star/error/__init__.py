@@ -5,7 +5,6 @@ from star.error.base import (
     ConflictError as ConflictError,
     NotFoundError as NotFoundError,
 )
-from star.error.auth import *
 from star.error.cache import *
 from star.error.common import *
 from star.error.common_client import *
