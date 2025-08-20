@@ -3,6 +3,7 @@
 !test_config.kv
 *.env
 *.toml
+!pyproject.toml
 conf.txt*
 auth.txt*
 server.log*
