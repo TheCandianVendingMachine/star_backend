@@ -32,8 +32,8 @@
 
 <h1>Video Information</h1>
 <div hx-ext='sse' sse-connect='/sse/video/{{ video.uuid }}' sse-swap='video:update' sse-close='video:update-end'>
-    <b><div id='video-title'></div></b>
-    <b>State:</b> <i><div id='video-state'></div></i>
+    <div><b id="video-title"></b></div>
+    <b>State:</b> <div><i id="video-state"></i></div>
     <b>Uploaded:</b> <div id='video-uploaded'></div>
     <div id='video-transcript-container'>
         <b>Subtitles:</b> 

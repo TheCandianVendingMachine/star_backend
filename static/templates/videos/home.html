@@ -1,7 +1,29 @@
 <h2>Videos</h2>
-<p>Please select from the following options:</p>
-<nav>
-<ul>
-    <li><a href="/video/upload" hx-on:mouseover="preload(this)" hx-on:click="setViewToCachedHTML(this)">Upload a video</a></li>
-</ul>
-</nav>
+<form method='get' action='/video/upload'>
+    <button type='submit'>Upload new video</button>
+</form>
+<div class="video-container">
+    <div class="video-display" id="video-gallery">
+        {% for video in videos %}
+        <a href="/video/{{ video.uuid }}" class="video-navigator" target="_self">
+            <div class="video-info">
+                <b id="video-title">{{ video.title }}</b>
+                <b>State:</b> <i id="video-state">{{ video.state }}</i>
+                <b>Uploaded:</b> <div id='video-uploaded'>{{ video.create_date }}</div>
+                <div id='video-transcript-container'>
+                    <b>Subtitles:</b> 
+                    {% if video.transcription %}
+                    <form id='video-transcript-form' method='get' action='/api/v1/transcript/{{ video.transcription.uuid }}'>
+                        <button id='video-transcript' type='submit'>Download</button>
+                    </form>
+                    {% else %}
+                    <form id='video-transcript-form' method='get' action='/api/v1/transcript/'>
+                        <button id='video-transcript' type='submit' disabled>Download</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>

@@ -153,7 +153,7 @@ class VideoApi:
                     else None,
                 )
             )
-        return JsonResponse({'videos': video_responses})
+        return JsonResponse({'videos': [dataclasses.asdict(response) for response in video_responses]})
 
     @define_sse_api
     async def stream_video(self, state: State, uuid: UUID) -> AsyncIterator[VideoEvent]:

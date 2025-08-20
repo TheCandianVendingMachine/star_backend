@@ -1,4 +1,5 @@
 import logging
+import datetime
 from uuid import UUID
 from quart import Blueprint, request, render_template_string
 from typing import AsyncIterator
@@ -50,8 +51,13 @@ def define_transcribe(api: Blueprint, sse: Blueprint, app: Blueprint):
     @app.get('/video')
     @html_endpoint(template_path='videos/home.html', title='Videos', expire_event=ServerEvent.VIDEO_STATE_CHANGE)
     async def video_homepage(html: str) -> HtmlResponse:
+        all_videos = (await VideoApi().get_videos(State.state, count=100, offset=0)).contained_json
+        for video in all_videos['videos']:
+            date_string = video['create_date'].split('.')[0]
+            video['create_date'] = str(datetime.datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S'))
         return await render_template_string(
-            html
+            html,
+            videos=all_videos['videos']
         )
 
     @app.get('/video/upload')
@@ -62,7 +68,7 @@ def define_transcribe(api: Blueprint, sse: Blueprint, app: Blueprint):
         )
 
     @app.get('/video/<uuid>')
-    @html_endpoint(template_path='videos/video.html', title='Video', expire_event=ServerEvent.VIDEO_STATE_CHANGE)
+    @html_endpoint(template_path='videos/video.html', title='Video', cache=False)
     async def show_video_info(html:str, uuid: str) -> HtmlResponse:
         return await render_template_string(
             html,

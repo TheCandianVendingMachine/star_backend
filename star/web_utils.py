@@ -209,7 +209,7 @@ def json_endpoint(func: Callable[..., Awaitable[JsonResponse]]):
     return wrapper
 
 
-def html_endpoint(*, template_path: Path | str, title: str | None = None, expire_event: ServerEvent | None = None):
+def html_endpoint(*, template_path: Path | str, title: str | None = None, expire_event: ServerEvent | None = None, cache: bool = True):
     """
     ### Decorator for HTML endpoint functions with template caching and rendering
 
@@ -254,15 +254,19 @@ def html_endpoint(*, template_path: Path | str, title: str | None = None, expire
             # We aggressivley cache the page and template to avoid unnecessary disk reads.
             # If the page or template has changed, we will re-read them and re-render the page.
             try:
+                if not cache:
+                    raise CacheMiss('caching disabled')
                 full_page, last_update = State.cache[page_hash]
             except CacheMiss:
                 full_page = None
                 last_update = 0
-
+            
             page_update_time = os.path.getmtime(page_path)
             template_update_time = os.path.getmtime(template_path)
             if full_page is None or last_update < page_update_time or last_update < template_update_time:
                 try:
+                    if not cache:
+                        raise CacheMiss('caching disabled')
                     page, last_update = State.cache['base_page']
                 except CacheMiss:
                     page = None
@@ -271,9 +275,12 @@ def html_endpoint(*, template_path: Path | str, title: str | None = None, expire
                 if page is None or last_update < page_update_time:
                     with open(page_path, encoding='utf-8') as file:
                         page = file.read()
-                    State.cache.insert('base_page', (page, page_update_time), expire_event=expire_event)
+                    if cache:
+                        State.cache.insert('base_page', (page, page_update_time), expire_event=expire_event)
 
                 try:
+                    if not cache:
+                        raise CacheMiss('caching disabled')
                     html, last_update = State.cache[original_template_path]
                 except CacheMiss:
                     html = None
@@ -282,7 +289,9 @@ def html_endpoint(*, template_path: Path | str, title: str | None = None, expire
                 if html is None or last_update < template_update_time:
                     with open(template_path, encoding='utf-8') as file:
                         html = file.read()
-                    State.cache.insert(original_template_path, (html, template_update_time), expire_event=expire_event)
+
+                    if cache:
+                        State.cache.insert(original_template_path, (html, template_update_time), expire_event=expire_event)
 
                 inner_html = await func(html=html, *args, **kwargs)
                 full_page = await render_template_string(
@@ -291,7 +300,8 @@ def html_endpoint(*, template_path: Path | str, title: str | None = None, expire
                     title=title if title is not None else 'Starshrum',
                 )
 
-                State.cache.insert(page_hash, (full_page, time.time()), expire_event=expire_event)
+                if cache:
+                    State.cache.insert(page_hash, (full_page, time.time()), expire_event=expire_event)
             return full_page
 
         return wrapper

@@ -1,0 +1,36 @@
+.video-container {
+    flex: 1;
+    display: flex;
+    overflow: auto;
+    flex-direction: column;
+    flex-flow: row wrap;
+    justify-content: space-around left;
+    width: 100%;
+}
+
+.video-display {
+    display: flex;
+    min-width: min-content;
+    flex-flow: wrap;
+    padding: 5px;
+}
+
+.video-info {
+    display: flex;
+    flex-direction: row;
+    flex-flow: column;
+    justify-content: space-around;
+    padding-right: 1em;
+    padding: 15px;
+    border: 1px solid #999;
+    margin-left: 3px;
+    margin-bottom: 3px;
+    width: 12em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.video-navigator {
+    text-decoration: none;
+}

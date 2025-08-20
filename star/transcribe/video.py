@@ -77,10 +77,9 @@ class VideoStore:
         offset = max(0, offset_id)
         with state.Session.begin() as session:
             logger.info(f'Fetching all videos and their transcripts, if applicable. (Count: {count}. Offset: {offset})')
-            query = select(Video, Transcription | None).join(Transcription, Transcription.id == Video.transcript, isouter=True)
+            query = select(Video, Transcription).join(Transcription, Transcription.id == Video.transcript, isouter=True)
             if filter:
                 query = query.where(Video.state.in_(filter))
-            videos = session.scalars(query.order_by(Video.id).offset(offset).limit(count)).fetchall()
-            videos = list(videos)
+            videos = list(session.execute(query.order_by(Video.id.desc())).all())
             session.expunge_all()
         return list(videos)
