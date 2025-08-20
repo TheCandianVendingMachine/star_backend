@@ -15,10 +15,10 @@ class Environment:
             db_filepath = GC.require('db_filepath').get()
             return f'{db_driver}:///{db_filepath}'
         else:
-            db_username, db_password, db_address, db_name = GC.require(
-                'db_username', 'db_password', 'db_address', 'db_name'
+            db_username, db_password, db_address = GC.require(
+                'db_username', 'db_password', 'db_address'
             ).get()
-            return f'{db_driver}://{db_username}:{db_password}@{db_address}/{db_name}'
+            return f'{db_driver}://{db_username}:{db_password}@{db_address}'
 
     def deploy_asgi(self) -> bool:
         raise NotImplementedError()

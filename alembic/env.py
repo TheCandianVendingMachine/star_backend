@@ -1,4 +1,5 @@
 from star.environment import ENVIRONMENT
+from star.settings import GLOBAL_CONFIGURATION as GC
 
 from logging.config import fileConfig
 
@@ -14,7 +15,7 @@ config = context.config
 # overwrite the inifile sqlalchemy url path
 config.set_main_option(
     'sqlalchemy.url',
-    ENVIRONMENT.db_connection()
+    f'{ENVIRONMENT.db_connection()}/{GC.require('db_name').get()}'
 )
 
 # Interpret the config file for Python logging.

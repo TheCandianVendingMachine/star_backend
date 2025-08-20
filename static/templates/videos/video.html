@@ -1,0 +1,44 @@
+<script>
+    document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
+        event.preventDefault();
+        let update_data = null;
+        try {
+            update_data = JSON.parse(JSON.parse(event.detail.data));
+        } catch(e) {
+            console.log('Failed to load JSON');
+            return;
+        }
+        console.log(update_data);
+        const date = new Date(update_data['create_date'] + 'UTC');
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric'
+        };
+        document.getElementById('video-title').innerHTML = update_data['title'];
+        document.getElementById('video-state').innerHTML = update_data['state'];
+        document.getElementById('video-uploaded').innerHTML = date.toLocaleDateString(undefined, options);
+
+        if (update_data.transcription) {
+            document.getElementById('video-transcript-form').setAttribute('action', '/api/v1/transcript/' + update_data.transcription.uuid);
+            document.getElementById('video-transcript').removeAttribute('disabled');
+        }
+    });
+</script>
+
+<h1>Video Information</h1>
+<div hx-ext='sse' sse-connect='/sse/video/{{ video.uuid }}' sse-swap='video:update' sse-close='video:update-end'>
+    <b><div id='video-title'></div></b>
+    <b>State:</b> <i><div id='video-state'></div></i>
+    <b>Uploaded:</b> <div id='video-uploaded'></div>
+    <div id='video-transcript-container'>
+        <b>Subtitles:</b> 
+        <form id='video-transcript-form' method='get' action='/api/v1/transcript/'>
+            <button id='video-transcript' type='submit' disabled>Download</button>
+        </form>
+    </div>
+</div>

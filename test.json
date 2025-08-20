@@ -1,0 +1,21 @@
+{
+    "format": {
+        "filename": "E:\\Starshroom\\Projects\\240801 - 30xx run 1.mp4",
+        "nb_streams": 2,
+        "nb_programs": 0,
+        "nb_stream_groups": 0,
+        "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+        "format_long_name": "QuickTime / MOV",
+        "start_time": "0.000000",
+        "duration": "888.733333",
+        "size": "1589479820",
+        "bit_rate": "14307822",
+        "probe_score": 100,
+        "tags": {
+            "major_brand": "mp42",
+            "minor_version": "0",
+            "compatible_brands": "mp42mp41",
+            "creation_time": "2024-08-02T03:52:35.000000Z"
+        }
+    }
+}

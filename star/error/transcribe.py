@@ -20,6 +20,14 @@ class VideoNotFoundError(TranscribeError):
         super().__init__(f'Could not find video with "{idx}"')
 
 
+class TranscriptNotFoundError(TranscribeError):
+    def status(self) -> int:
+        return 404
+
+    def __init__(self, idx: Any):
+        super().__init__(f'Could not find transcript with "{idx}"')
+
+
 class InvalidFileFormat(TranscribeError):
     def status(self) -> int:
         return 415

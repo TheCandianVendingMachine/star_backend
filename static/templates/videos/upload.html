@@ -1,0 +1,9 @@
+<h1>Upload your video</h1>
+<form hx-post="/api/v1/video" enctype="multipart/form-data" hx-indicator="#upload-indicator">
+    <input type="file" name="file" accept="video/*">
+    <button type="submit">Upload</button>
+</form>
+<div id="upload-indicator" class="htmx-indicator">
+    <p><i>Uploading...</i></p>
+    <img style="width:64px;height:64px;" src="/static/webp/evanspin.gif">
+</div>

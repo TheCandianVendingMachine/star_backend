@@ -5,6 +5,9 @@ from collections.abc import Callable
 
 class ServerEvent(StrEnum):
     TEST_EVENT = 'test_event'
+    VIDEO_UPLOADED = 'upload'
+    VIDEO_STATE_CHANGE = 'video state changed'
+    VIDEO_TRANSCRIPT_COMPLETED = 'video transcript completed'
 
 
 class Broker:

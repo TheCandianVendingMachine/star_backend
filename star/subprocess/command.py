@@ -3,6 +3,7 @@ import copy
 import subprocess
 import asyncio
 import asyncio.subprocess
+import os
 from typing import Any
 from collections.abc import Iterable
 from pathlib import Path
@@ -27,6 +28,8 @@ class Command:
     KEYWORD_PREFIX: str = '--'
     KEYWORD_PREFIXES: dict[str, str] = {}
     POSITIONAL_ARGUMENTS_FIRST: bool = False
+
+    WORKING_DIRECTORY: str | None = os.getcwd()
 
     @classmethod
     def locate(cls) -> str:
@@ -158,14 +161,14 @@ class Command:
     def call(cls, *args, **kwargs) -> Any:
         runner = Runner(cls._get_command(*args, **kwargs))
         logger.info(f'Calling `{" ".join(runner.command)}` (synchronous) with args={args}, kwargs={kwargs}')
-        stdout, stderr = runner.call(*args, **kwargs)
+        stdout, stderr = runner.call(cls.WORKING_DIRECTORY)
         return cls._interpret_results(stdout, stderr)
 
     @classmethod
     async def acall(cls, *args, **kwargs) -> Any:
         runner = Runner(cls._get_command(*args, **kwargs))
         logger.info(f'Calling `{" ".join(runner.command)}` (asynchronous) with args={args}, kwargs={kwargs}')
-        stdout, stderr = await runner.acall(*args, **kwargs)
+        stdout, stderr = await runner.acall(cls.WORKING_DIRECTORY)
         return cls._interpret_results(stdout, stderr)
 
     def __call__(self, *args, **kwargs) -> Any:
@@ -200,9 +203,9 @@ class Runner:
         logger.info(f'Dry-running `{" ".join(self.command)}`')
         return ' '.join(self.command)
 
-    def call(self, *args, **kwargs) -> Any:
-        logger.info(f'Calling `{" ".join(self.command)}` (synchronous)')
-        result = subprocess.run(args=self.command, capture_output=True)
+    def call(self, working_directory: str | None) -> Any:
+        logger.info(f'Calling `{" ".join(self.command)}` [cwd: {working_directory}] (synchronous)')
+        result = subprocess.run(args=self.command, capture_output=True, cwd=working_directory)
         try:
             result.check_returncode()
         except subprocess.CalledProcessError as e:
@@ -216,12 +219,13 @@ class Runner:
             ) from e
         return result.stdout.decode(), result.stderr.decode()
 
-    async def acall(self, *args, **kwargs) -> Any:
-        logger.info(f'Calling `{" ".join(self.command)}` (asynchronous)')
+    async def acall(self, working_directory: str | None) -> Any:
+        logger.info(f'Calling `{" ".join(self.command)}` [cwd: {working_directory}] (asynchronous)')
         process = await asyncio.create_subprocess_exec(
             *self.command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            cwd=working_directory
         )  # ty: ignore[missing-argument]
 
         stdout, stderr = await process.communicate()

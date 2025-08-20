@@ -3,7 +3,7 @@ from star.subprocess.command import Command, define_process
 
 
 class Transcribe(Command):
-    RUNNER = 'python'
+    RUNNER = 'uv run python'
     COMMAND_PATHS = [Path('./scripts')]
     COMMAND = 'transcribe.py'
 

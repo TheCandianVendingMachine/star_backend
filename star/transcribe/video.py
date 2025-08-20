@@ -9,8 +9,9 @@ from star.models.transcribe import Video, Transcription
 from star.transcribe.state import VideoState
 from star.transcribe.metadata import VideoMetadata
 from star.error import DbError, VideoNotFoundError
+from star.events import ServerEvent
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('star.video')
 
 
 class VideoStore:
@@ -20,7 +21,7 @@ class VideoStore:
             with state.Session.begin() as session:
                 video = Video(title=video_metadata.title, state=VideoState.PENDING)
                 session.add(video)
-                session.commit()
+                session.flush()
                 session.expunge(video)
             return video
         except SQLAlchemyError as e:
@@ -28,34 +29,46 @@ class VideoStore:
             raise DbError() from e
 
     def update_video_state(self, state: State, video: Video, video_state: VideoState):
+        video_title = video.title
         with state.Session.begin() as session:
-            logger.info(f'Updating video state for video "{video.title}" to "{video_state}"')
+            logger.info(f'Updating video state for video "{video_title}" to "{video_state}"')
             try:
-                session.execute(update(Video).where(Video.id == video.id).values(state=video_state))
-                session.commit()
+                session.add(video)
+                video.state = video_state
+                session.flush()
             except SQLAlchemyError as e:
-                logger.error(f'Failed to update video state for video "{video.title}" to "{video_state}"')
+                logger.error(f'Failed to update video state for video "{video_title}" to "{video_state}"')
                 raise DbError() from e
+            finally:
+                session.expunge(video)
+
+        state.broker.publish(ServerEvent.VIDEO_STATE_CHANGE, {'uuid': video.uuid, 'state': video_state})
 
     def link_transcription(self, state: State, video: Video, transcript: Transcription, transcription_path: Path):
         with state.Session.begin() as session:
             logger.info(f'Linking transcription path "{transcription_path}" to video "{video.title}"')
             try:
-                session.execute(update(Video).where(Video.id == video.id).values(transcript=transcript.id))
-                session.commit()
+                session.add(video)
+                session.add(transcript)
+                video.transcript = transcript.id
+                session.flush()
             except SQLAlchemyError as e:
                 logger.error(f'Failed to link transcription path "{transcription_path}" to video "{video.title}"')
                 raise DbError() from e
+            finally:
+                session.expunge(video)
+                session.expunge(transcript)
 
-    def get_video_from_uuid(self, state: State, uuid: UUID) -> Video:
+    def get_video_from_uuid(self, state: State, uuid: UUID) -> tuple[Video, Transcription | None]:
         with state.Session.begin() as session:
             logger.info(f'Fetching video with UUID "{uuid}"')
-            video = session.scalar(select(Video).where(Video.uuid == uuid))
+            query = select(Video, Transcription).join(Transcription, Transcription.id == Video.transcript, isouter=True)
+            video, transcript = session.execute(query.where(Video.uuid == uuid)).all()[0]
             if not video:
                 logger.error(f'Video with UUID "{uuid}" not found')
                 raise VideoNotFoundError(uuid)
-            session.expunge(video)
-        return video
+            session.expunge_all()
+        return video, transcript
 
     def get_all_videos(
         self, state: State, count: int, offset_id: int, filter: list[VideoState] = []

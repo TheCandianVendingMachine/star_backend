@@ -3,8 +3,9 @@ import traceback
 import os
 import time
 import functools
-from collections.abc import Callable, Awaitable
-from collections.abc import AsyncGenerator
+import itertools
+from collections.abc import Callable, Awaitable, AsyncIterator
+from collections.abc import AsyncIterator
 from pathlib import Path
 from quart import request, render_template_string
 
@@ -16,6 +17,20 @@ from star.web_event import BaseEvent
 
 
 logger = logging.getLogger('star')
+
+
+def define_sse_api(func: Callable[..., AsyncIterator[BaseEvent]]):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            async for event in func(*args, **kwargs):
+                yield event.as_web_event()
+        except ServerError as e:
+            logger.warning(f'SSE error: {e}')
+            logger.debug(f'Exception traceback:\n{traceback.format_exc()}')
+            StopAsyncIteration
+
+    return wrapper
 
 
 def define_async_api(func: Callable[..., Awaitable[WebResponse]]):
@@ -273,7 +288,7 @@ def html_endpoint(*, template_path: Path | str, title: str | None = None, expire
                 full_page = await render_template_string(
                     page,
                     inner_html=inner_html,
-                    title=title if title is not None else 'Bourbon Warfare',
+                    title=title if title is not None else 'Starshrum',
                 )
 
                 State.cache.insert(page_hash, (full_page, time.time()), expire_event=expire_event)
@@ -284,7 +299,7 @@ def html_endpoint(*, template_path: Path | str, title: str | None = None, expire
     return decorator
 
 
-def sse_endpoint(func: Callable[..., AsyncGenerator[WebEvent | BaseEvent]]):
+def sse_endpoint(func: Callable[..., AsyncIterator[WebEvent | BaseEvent]]):
     """
     ### Decorator for Server-Sent Events endpoint functions
 
@@ -298,7 +313,7 @@ def sse_endpoint(func: Callable[..., AsyncGenerator[WebEvent | BaseEvent]]):
     **Async:** No (decorator function itself is synchronous)
 
     **Args:**
-    - `func` (`Callable[..., AsyncGenerator[WebEvent | BaseEvent]]`): The SSE endpoint function that yields events.
+    - `func` (`Callable[..., AsyncIterator[WebEvent | BaseEvent]]`): The SSE endpoint function that yields events.
 
     **Returns:**
     - `Callable[..., Awaitable[ServerSentEventResponse]]`: A wrapped function that returns a proper SSE response.
@@ -314,16 +329,11 @@ def sse_endpoint(func: Callable[..., AsyncGenerator[WebEvent | BaseEvent]]):
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs) -> ServerSentEventResponse:
-        generator = func(*args, **kwargs)
+        async def async_byte_generator():
+            async for event in func(*args, **kwargs):
+                yield event.encode()
+            StopAsyncIteration
 
-        if isinstance(generator, AsyncGenerator[BaseEvent]):
-
-            async def wrapped_generator() -> AsyncGenerator[WebEvent]:
-                async for event in func(*args, **kwargs):
-                    yield event.as_web_event()
-
-            generator = wrapped_generator()
-
-        return await ServerSentEventResponse.from_async_generator(generator)
+        return ServerSentEventResponse.from_async_generator(async_byte_generator)
 
     return wrapper

@@ -28,6 +28,5 @@ class Transcription(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     uuid: Mapped[UUID] = mapped_column(SqlUUID(), nullable=False, unique=True, default=uuid4)
     created: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=False), nullable=False, default=datetime.datetime.now)
-    video_id: Mapped[int] = mapped_column(ForeignKey('videos.id'), nullable=False)
     language: Mapped[str] = mapped_column(String(LANGUAGE_LENGTH), nullable=False)
     path: Mapped[str] = mapped_column(String(PATH_LENGTH), nullable=False)

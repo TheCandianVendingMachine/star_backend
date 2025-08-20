@@ -14,7 +14,7 @@ app = Quart(__name__)
 app.config.update(
     TESTING=False,
     PROPAGATE_EXCEPTIONS=False,
-    MAX_CONTENT_LENGTH=15 * 1024 * 1024 * 1024,
+    MAX_CONTENT_LENGTH=50 * 1024 * 1024 * 1024,
 )
 state = State()
 define_endpoints(app)

@@ -2,7 +2,7 @@ from quart import Response
 from werkzeug.datastructures.headers import Headers
 from dataclasses import dataclass
 from typing import Self
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
 import json
 
 
@@ -58,6 +58,10 @@ class Exists(WebResponse):
         self.exists = exists
 
 
+class SeeOther(WebResponse):
+    def __init__(self, subdomain: str):
+        super().__init__(headers={ 'hx-redirect': subdomain }, status=303)
+
 class DoesNotExist(Exists):
     def __init__(self):
         super().__init__(False)
@@ -83,7 +87,7 @@ class HtmlResponse(WebResponse):
         super().__init__(status=200, headers=headers, response=html)
 
 
-@dataclass(kw_only=True)
+@dataclass
 class WebEvent:
     event: str
     data: str | dict = ''
@@ -111,11 +115,7 @@ class ServerSentEventResponse(WebResponse):
         }
 
     @classmethod
-    async def from_async_generator(cls, async_generator: AsyncGenerator[WebEvent]) -> AsyncGenerator[Self]:
-        async def async_generator_wrapper() -> AsyncGenerator[bytes]:
-            async for event in async_generator:
-                yield event.encode()
-
-        response = cls(status=200, response=async_generator_wrapper())
+    def from_async_generator(cls, async_generator: AsyncIterator[WebEvent]) -> AsyncIterator[Self]:
+        response = cls(status=200, response=async_generator())
         response.timeout = None  # Disable timeout for SSE
         return response

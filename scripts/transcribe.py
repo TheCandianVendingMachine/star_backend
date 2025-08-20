@@ -1,9 +1,13 @@
+import os
 import sys
 import whisperx
 import torch
 import gc
 import contextlib
 from pathlib import Path
+
+sys.path.append(str(Path(os.getcwd())))
+
 from star.environment import ENVIRONMENT
 from star.configuration import Configuration
 
@@ -28,7 +32,7 @@ class Transcriber:
     batch_size: int
 
     def __init__(self, audio_path: Path):
-        config = Configuration('transcription.env')
+        config = Configuration.load('transcription.env')
         self.compute_type = config.require('compute_type').get()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model_variant = config.require('model_variant').get()
