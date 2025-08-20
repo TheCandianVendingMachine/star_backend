@@ -11,7 +11,11 @@ import star.response  # noqa: F401
 dictConfig(log_config())
 
 app = Quart(__name__)
-app.config.update(TESTING=False, PROPAGATE_EXCEPTIONS=False)
+app.config.update(
+    TESTING=False,
+    PROPAGATE_EXCEPTIONS=False,
+    MAX_CONTENT_LENGTH=15 * 1024 * 1024 * 1024,
+)
 state = State()
 define_endpoints(app)
 

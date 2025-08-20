@@ -31,7 +31,10 @@ class Command:
     @classmethod
     def locate(cls) -> str:
         if cls.GUARANTEE_CAN_RUN or cls.RUNNER != '':
-            return cls.COMMAND
+            if len(cls.COMMAND_PATHS) == 0:
+                return cls.COMMAND
+            else:
+                return str(cls.COMMAND_PATHS[0] / cls.COMMAND)
         for path in cls.COMMAND_PATHS:
             if can_call_as_command(str(path / cls.COMMAND)):
                 return str(path / cls.COMMAND)
@@ -197,7 +200,7 @@ class Runner:
         logger.info(f'Dry-running `{" ".join(self.command)}`')
         return ' '.join(self.command)
 
-    def call(self) -> Any:
+    def call(self, *args, **kwargs) -> Any:
         logger.info(f'Calling `{" ".join(self.command)}` (synchronous)')
         result = subprocess.run(args=self.command, capture_output=True)
         try:
@@ -213,7 +216,7 @@ class Runner:
             ) from e
         return result.stdout.decode(), result.stderr.decode()
 
-    async def acall(self) -> Any:
+    async def acall(self, *args, **kwargs) -> Any:
         logger.info(f'Calling `{" ".join(self.command)}` (asynchronous)')
         process = await asyncio.create_subprocess_exec(
             *self.command,

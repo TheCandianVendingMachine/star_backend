@@ -1,4 +1,5 @@
 from star.settings import GLOBAL_CONFIGURATION as GC
+from pathlib import Path
 
 
 class Environment:
@@ -9,14 +10,30 @@ class Environment:
         raise NotImplementedError()
 
     def db_connection(self) -> str:
-        GC.require('db_driver', 'db_username', 'db_password', 'db_address', 'db_name')
-        return f'{GC["db_driver"]}://{GC["db_username"]}:{GC["db_password"]}@{GC["db_address"]}'
+        db_driver = GC.require('db_driver').get()
+        if db_driver.split('+')[0] == 'sqlite':
+            db_filepath = GC.require('db_filepath').get()
+            return f'{db_driver}:///{db_filepath}'
+        else:
+            db_username, db_password, db_address, db_name = GC.require(
+                'db_username', 'db_password', 'db_address', 'db_name'
+            ).get()
+            return f'{db_driver}://{db_username}:{db_password}@{db_address}/{db_name}'
 
     def deploy_asgi(self) -> bool:
         raise NotImplementedError()
 
     def use_subprocess(self) -> bool:
         raise NotImplementedError()
+
+    def upload_folder(self) -> Path:
+        return Path(GC.require('upload_folder').get())
+
+    def model_folder(self) -> Path:
+        return Path(GC.require('model_folder').get())
+
+    def transcript_folder(self) -> Path:
+        return Path(GC.require('transcript_output_dir').get())
 
 
 class Local(Environment):

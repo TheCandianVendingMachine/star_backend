@@ -38,9 +38,4 @@ class UploadError(ClientError):
         return 422
 
     def __init__(self, reason: str):
-        super().__init__('Something went wrong with the upload: {reason}')
-
-
-class MissionDoesNotHaveMetadata(UploadError):
-    def __init__(self):
-        super().__init__('mission does not have attached mission testing attributes')
+        super().__init__(f'Something went wrong with the upload: {reason}')

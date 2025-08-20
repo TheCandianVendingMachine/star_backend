@@ -7,7 +7,7 @@ class TranscribeError(ServerError):
         super().__init__(f'Failed to transcribe video: {message}')
 
 
-class UploadError(TranscribeError):
+class TranscriptUploadError(TranscribeError):
     def __init__(self):
         super().__init__('Could not upload')
 
@@ -18,3 +18,11 @@ class VideoNotFoundError(TranscribeError):
 
     def __init__(self, idx: Any):
         super().__init__(f'Could not find video with "{idx}"')
+
+
+class InvalidFileFormat(TranscribeError):
+    def status(self) -> int:
+        return 415
+
+    def __init__(self):
+        super().__init__('Uploaded file not in a valid supplied format')

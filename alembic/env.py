@@ -1,5 +1,4 @@
-from star.settings import GLOBAL_CONFIGURATION as GC
-GC.require('db_driver', 'db_username', 'db_password', 'db_address', 'db_name')
+from star.environment import ENVIRONMENT
 
 from logging.config import fileConfig
 
@@ -15,7 +14,8 @@ config = context.config
 # overwrite the inifile sqlalchemy url path
 config.set_main_option(
     'sqlalchemy.url',
-    f'{GC['db_driver']}://{GC['db_username']}:{GC['db_password']}@{GC['db_address']}/{GC['db_name']}')
+    ENVIRONMENT.db_connection()
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -27,6 +27,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 import star.models
+from star.models.transcribe import *
 target_metadata = star.models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
