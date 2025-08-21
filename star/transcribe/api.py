@@ -60,9 +60,8 @@ class VideoEventEnd(VideoEvent):
 
 
 class VideoApi:
-    async def _transcribe(self, state: State, video: Video, audio_file: Path):
+    async def _transcribe(self, state: State, video_file: Path, video: Video):
         try:
-            video_file = video.path
             # Generate ffprobe metadata
             json_file = video_file.with_suffix('.ffprobe.json')
             logger.info(f'Generating metadata to {json_file}')
@@ -74,19 +73,17 @@ class VideoApi:
             if 'error' in metadata:
                 raise InvalidFileFormat()
 
-            audio_file = video_file.with_suffix('.aac')
-            logger.info(f'Extracting audio from {video_file} to {audio_file}')
-            await ffmpeg.acall(
-                str(audio_file),
-                i=str(video_file),
-                vn=True,
-                acodec='copy',
-                loglevel='error'
-            )
-
 
             with TemporaryDirectory() as processing_directory:
-                audio_file = audio_file.rename(Path(processing_directory.name) / audio_file.name)
+                audio_file = Path(processing_directory.name) /video_file.with_suffix('.aac').name
+                logger.info(f'Extracting audio from {video_file} to {audio_file}')
+                await ffmpeg.acall(
+                    str(audio_file),
+                    i=str(video_file),
+                    vn=True,
+                    acodec='copy',
+                    loglevel='error'
+                )
 
                 logger.info(f'Starting transcription for video "{video.title}" with audio file "{audio_file}"')
                 VideoStore().update_video_state(state, video, VideoState.PROCESSING)
@@ -127,7 +124,7 @@ class VideoApi:
         video = VideoStore().create_video(state, metadata)
 
         from star.server import app
-        app.add_background_task(VideoApi._transcribe, self, state, video)
+        app.add_background_task(VideoApi._transcribe, self, state, video_file, video)
 
         state.broker.publish(ServerEvent.VIDEO_UPLOADED, {'uuid': video.uuid, 'title': video.title})
         return SeeOther(f'/video/{video.uuid}')
