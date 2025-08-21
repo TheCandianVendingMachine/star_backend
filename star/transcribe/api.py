@@ -123,9 +123,11 @@ class VideoApi:
         metadata = VideoMetadata(title=video_file.stem)
         video = VideoStore().create_video(state, metadata)
 
+        logger.info(f'Created video entry in database with UUID: {video.uuid}')
         from star.server import app
         app.add_background_task(VideoApi._transcribe, self, state, video_file, video)
 
+        logger.info(f'Video file {video_file} is being processed in the background...')
         state.broker.publish(ServerEvent.VIDEO_UPLOADED, {'uuid': video.uuid, 'title': video.title})
         return SeeOther(f'/video/{video.uuid}')
 
