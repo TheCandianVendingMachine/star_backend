@@ -60,50 +60,11 @@ class VideoEventEnd(VideoEvent):
 
 
 class VideoApi:
-    async def _transcribe(self, state: State, video: Video, audio_file: Path, processing_directory: TemporaryDirectory):
+    async def _transcribe(self, state: State, video: Video, audio_file: Path):
         try:
-            logger.info(f'Starting transcription for video "{video.title}" with audio file "{audio_file}"')
-            VideoStore().update_video_state(state, video, VideoState.PROCESSING)
-            await transcribe.acall(str(audio_file))
-            logger.info(f'Transcription for video "{video.title}" completed')
-            transcript = Path(processing_directory.name) / audio_file.with_suffix('.srt').name
-            
-            idx = 0
-            while True:
-                test_path = ENVIRONMENT.transcript_folder() / transcript.name
-                if idx > 0:
-                    test_path = ENVIRONMENT.transcript_folder() / f'{transcript.stem}_{idx}.srt'
-
-                if not test_path.exists():
-                    transcript = transcript.rename(test_path)
-                    break
-
-                idx = idx + 1
-
-            logger.info(f'Linking transcription for video "{video.title}" to database')
-            db_transcript = TranscriptionStore().create_transcript(state, video, Language.ENGLISH, transcript)
-
-            VideoStore().link_transcription(state, video, db_transcript, transcript)
-            VideoStore().update_video_state(state, video, VideoState.COMPLETED)
-            logger.info(f'Video "{video.title}" transcription linked to DB')
-            state.broker.publish(
-                ServerEvent.VIDEO_TRANSCRIPT_COMPLETED, {'uuid': video.uuid, 'transcript': db_transcript.uuid, 'title': video.title}
-            )
-        except ServerError as e:
-            VideoStore().update_video_state(state, video, VideoState.FAILED)
-            logger.error(f'Failed to transcribe video "{video.title}":\n{e}')
-
-    @define_async_api
-    async def upload_video(self, state: State, video_file: Path) -> WebResponse:
-        logger.info(f'Uploading video file: {video_file} to server')
-        with TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            # Move the uploaded file to a temporary directory for processing
-            temp_video_file = temp_path / video_file.name
-            video_file = video_file.rename(temp_video_file)
-
+            video_file = video.path
             # Generate ffprobe metadata
-            json_file = temp_video_file.with_suffix('.ffprobe.json')
+            json_file = video_file.with_suffix('.ffprobe.json')
             logger.info(f'Generating metadata to {json_file}')
             await ffprobe.acall(str(video_file), show_format=True, show_error=True, output_format='json', o=str(json_file), loglevel='error')
 
@@ -123,14 +84,51 @@ class VideoApi:
                 loglevel='error'
             )
 
-            metadata = VideoMetadata(title=video_file.stem)
-            video = VideoStore().create_video(state, metadata)
 
-            processing_directory = TemporaryDirectory()
-            audio_file = audio_file.rename(Path(processing_directory.name) / audio_file.name)
-            from star.server import app
+            with TemporaryDirectory() as processing_directory:
+                audio_file = audio_file.rename(Path(processing_directory.name) / audio_file.name)
 
-            app.add_background_task(VideoApi._transcribe, self, state, video, audio_file, processing_directory)
+                logger.info(f'Starting transcription for video "{video.title}" with audio file "{audio_file}"')
+                VideoStore().update_video_state(state, video, VideoState.PROCESSING)
+                await transcribe.acall(str(audio_file))
+                logger.info(f'Transcription for video "{video.title}" completed')
+                transcript = Path(processing_directory.name) / audio_file.with_suffix('.srt').name
+            
+                idx = 0
+                while True:
+                    test_path = ENVIRONMENT.transcript_folder() / transcript.name
+                    if idx > 0:
+                        test_path = ENVIRONMENT.transcript_folder() / f'{transcript.stem}_{idx}.srt'
+
+                    if not test_path.exists():
+                        transcript = transcript.rename(test_path)
+                        break
+
+                    idx = idx + 1
+
+            logger.info(f'Linking transcription for video "{video.title}" to database')
+            db_transcript = TranscriptionStore().create_transcript(state, video, Language.ENGLISH, transcript)
+
+            VideoStore().link_transcription(state, video, db_transcript, transcript)
+            VideoStore().update_video_state(state, video, VideoState.COMPLETED)
+            logger.info(f'Video "{video.title}" transcription linked to DB')
+            state.broker.publish(
+                ServerEvent.VIDEO_TRANSCRIPT_COMPLETED, {'uuid': video.uuid, 'transcript': db_transcript.uuid, 'title': video.title}
+            )
+        except ServerError as e:
+            VideoStore().update_video_state(state, video, VideoState.FAILED)
+            logger.error(f'Failed to transcribe video "{video.title}":\n{e}')
+
+    @define_async_api
+    async def upload_video(self, state: State, video_file: Path) -> WebResponse:
+        logger.info(f'Uploading video file: {video_file} to server')
+
+        metadata = VideoMetadata(title=video_file.stem)
+        video = VideoStore().create_video(state, metadata)
+
+        from star.server import app
+        app.add_background_task(VideoApi._transcribe, self, state, video)
+
         state.broker.publish(ServerEvent.VIDEO_UPLOADED, {'uuid': video.uuid, 'title': video.title})
         return SeeOther(f'/video/{video.uuid}')
 
