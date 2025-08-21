@@ -38,11 +38,12 @@ class Command:
                 return cls.COMMAND
             else:
                 return str(cls.COMMAND_PATHS[0] / cls.COMMAND)
-        for path in cls.COMMAND_PATHS:
-            if can_call_as_command(str(path / cls.COMMAND)):
-                return str(path / cls.COMMAND)
-        if can_call_as_command(f'./bin/{cls.COMMAND}'):
-            return f'./bin/{cls.COMMAND}'
+        command_path = can_call_as_command(
+            cls.COMMAND,
+            ['./bin/', *[str(p) for p in cls.COMMAND_PATHS]]
+        )
+        if command_path:
+            return command_path
         if can_call_as_command(cls.COMMAND):
             return cls.COMMAND
 
