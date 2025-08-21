@@ -75,7 +75,7 @@ class VideoApi:
 
 
             with TemporaryDirectory() as processing_directory:
-                audio_file = Path(processing_directory.name) /video_file.with_suffix('.aac').name
+                audio_file = Path(processing_directory) /video_file.with_suffix('.aac').name
                 logger.info(f'Extracting audio from {video_file} to {audio_file}')
                 await ffmpeg.acall(
                     str(audio_file),
@@ -89,7 +89,7 @@ class VideoApi:
                 VideoStore().update_video_state(state, video, VideoState.PROCESSING)
                 await transcribe.acall(str(audio_file))
                 logger.info(f'Transcription for video "{video.title}" completed')
-                transcript = Path(processing_directory.name) / audio_file.with_suffix('.srt').name
+                transcript = Path(processing_directory) / audio_file.with_suffix('.srt').name
             
                 idx = 0
                 while True:

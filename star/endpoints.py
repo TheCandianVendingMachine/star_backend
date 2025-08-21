@@ -19,6 +19,10 @@ def define(app: Quart):
     async def static_css():
         return await send_from_directory('static/css', 'style.css')
 
+    @app.get('/static/css/girly.css')
+    async def girly_css():
+        return await send_from_directory('static/css', 'girly.css')
+
     @app.get('/static/webp/<resource>')
     async def static_webp(resource: str):
         path = Path('static/') / resource

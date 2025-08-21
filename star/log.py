@@ -2,6 +2,7 @@ from star.settings import GLOBAL_CONFIGURATION
 from star.environment import ENVIRONMENT, Local
 
 import os
+import logging
 from typing import Any
 
 PRODUCTION_LOG_CONFIG = {
@@ -15,11 +16,22 @@ PRODUCTION_LOG_CONFIG = {
 }
 
 
+class NoHealthcheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        allow = record.getMessage().find('/healthcheck') == -1
+        return allow
+
+
 def config() -> dict[str, Any]:
     if not os.path.exists('./logs'):
         os.makedirs('./logs')
     return {
         'version': 1,
+        'filters': {
+            'no_healthcheck': {
+                '()': NoHealthcheckFilter,
+            }
+        },
         'formatters': {
             'default': {'format': '[%(asctime)s] [%(module)s] %(levelname)s: %(message)s', 'datefmt': '%Y-%m-%d %H:%M:%S'}
         },
@@ -28,6 +40,7 @@ def config() -> dict[str, Any]:
                 'class': 'logging.StreamHandler',
                 'stream': 'ext://flask.logging.wsgi_errors_stream',
                 'formatter': 'default',
+                'filters': ['no_healthcheck']
             },
             'file': {
                 'class': 'logging.handlers.RotatingFileHandler',
@@ -35,6 +48,7 @@ def config() -> dict[str, Any]:
                 'filename': 'logs/server.log',
                 'backupCount': int(GLOBAL_CONFIGURATION.get('log_backup_count', 3)),
                 'maxBytes': int(GLOBAL_CONFIGURATION.get('single_log_size', 1 * 1024 * 1024)),
+                'filters': ['no_healthcheck']
             },
             'ffmpeg': {
                 'class': 'logging.handlers.RotatingFileHandler',
@@ -56,6 +70,10 @@ def config() -> dict[str, Any]:
             'handlers': ['wsgi', 'file'],
         },
         'loggers': {
+            'uvicorn.access': {
+                'level': 'DEBUG' if isinstance(ENVIRONMENT, Local) else PRODUCTION_LOG_CONFIG['quart.app'],
+                'handlers': ['wsgi', 'file'],
+            },
             'quart.app': {
                 'level': 'DEBUG' if isinstance(ENVIRONMENT, Local) else PRODUCTION_LOG_CONFIG['quart.app'],
                 'handlers': ['wsgi', 'file'],
