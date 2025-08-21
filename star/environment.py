@@ -83,7 +83,7 @@ class Production(Environment):
         return 12239
 
     def use_ssl(self) -> bool:
-        return True
+        return False
 
     def deploy_asgi(self) -> bool:
         return True
