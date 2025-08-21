@@ -2,7 +2,7 @@ import shutil
 import os
 
 
-def can_call_as_command(program: str, paths: list[str]) -> str:
+def can_call_as_command(program: str, paths: list[str] | None = None) -> str:
     paths_to_check = None
     if paths:
         paths_to_check = f'{os.pathsep}'.join(paths)
