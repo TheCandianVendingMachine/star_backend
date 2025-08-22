@@ -44,7 +44,11 @@ class Transcriber:
 
         print(f'Using whisperx.{self.model_variant}.{self.compute_type} on {self.device} with {self.batch_size} batch size')
         self.model = whisperx.load_model(
-            self.model_variant, self.device, compute_type=self.compute_type, download_root=self.model_path
+            self.model_variant,
+            self.device,
+            compute_type=self.compute_type,
+            download_root=self.model_path,
+            language='en',
         )
 
     def transcribe(self):
@@ -54,7 +58,11 @@ class Transcriber:
             result = self.model.transcribe(audio, batch_size=self.batch_size)
 
         print('Aligning transcription output')
-        model, metadata = whisperx.load_align_model(language_code='en', device=self.device, model_dir=self.model_path)
+        model, metadata = whisperx.load_align_model(
+            language_code='en',
+            device=self.device,
+            model_dir=self.model_path
+        )
         with resource_cleaner(model):
             result = whisperx.align(result['segments'], model, metadata, audio, self.device, return_char_alignments=False)
 

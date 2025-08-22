@@ -113,7 +113,6 @@ class VideoApi:
             VideoStore().update_video_state(state, video, VideoState.COMPLETED)
             logger.info(f'Video "{video.title}" transcription linked to DB')
             logger.info(f'Removing temporary video file: {video_file}')
-            video_file.unlink()
             logger.info(f'Video transcript complete and ready')
             state.broker.publish(
                 ServerEvent.VIDEO_TRANSCRIPT_COMPLETED, {'uuid': video.uuid, 'transcript': db_transcript.uuid, 'title': video.title}
@@ -125,6 +124,8 @@ class VideoApi:
             VideoStore().update_video_state(state, video, VideoState.FAILED)
             logger.error(f'Failed to transcribe video "{video.title}":\n{e}')
             raise e
+        finally:
+            video_file.unlink()
 
     @define_async_api
     async def upload_video(self, state: State, video_file: Path) -> WebResponse:
