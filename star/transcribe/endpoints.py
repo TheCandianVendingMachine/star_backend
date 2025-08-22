@@ -21,20 +21,31 @@ def define_transcribe(api: Blueprint, sse: Blueprint, app: Blueprint):
     @api.post('/video')
     @url_endpoint
     async def upload_video() -> WebResponse:
-        logger.info('Received video upload request')
+        logger.info('Received chunked video upload request')
+        form = await request.form
         files = await request.files
-        logger.info('File downloaded')
-
+        
         if 'file' not in files:
             logger.error('No file part in the request')
             return UploadError('No file part in the request').as_response_code()
-
+        
         file = files['file']
-        filename = secure_filename(file.filename)
-        save_path = ENVIRONMENT.upload_folder() / filename
-        logger.info(f'Uploading video file to {save_path}')
-        await file.save(save_path)
-        return await VideoApi().upload_video(State.state, save_path)
+        filename = form.get('filename', file.filename)
+        chunk_index = int(form.get('dzchunkindex', 0))
+        total_chunks = int(form.get('dztotalchunkcount', 1))
+        chunk_uuid = form.get('dzuuid', '')
+        
+        file_data = file.read()
+        
+        logger.info(f'Received chunk {chunk_index + 1}/{total_chunks} for file {filename}')
+        return await VideoApi().upload_chunk(
+            State.state, 
+            file_data, 
+            filename, 
+            chunk_index, 
+            total_chunks, 
+            chunk_uuid
+        )
 
     @sse.get('/video/<uuid:uuid>')
     @sse_endpoint

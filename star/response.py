@@ -60,7 +60,7 @@ class Exists(WebResponse):
 
 class SeeOther(WebResponse):
     def __init__(self, subdomain: str):
-        super().__init__(headers={ 'hx-redirect': subdomain }, status=303)
+        super().__init__(headers={ 'hx-redirect': subdomain }, status=303, response=json.dumps({'redirect_url': subdomain}))
 
 class DoesNotExist(Exists):
     def __init__(self):

@@ -1,4 +1,4 @@
-from star.response import WebResponse, Created, JsonResponse, SeeOther
+from star.response import WebResponse, Created, JsonResponse, SeeOther, Ok
 from star.web_utils import define_async_api, define_sse_api
 from star.subprocess.ffprobe import ffprobe
 from star.subprocess.ffmpeg import ffmpeg
@@ -18,10 +18,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import UUID
 from collections.abc import AsyncIterator
+from werkzeug.utils import secure_filename
 import json
 import logging
 import dataclasses
 import asyncio
+import shutil
+import re
 
 logger = logging.getLogger('star.video')
 
@@ -134,6 +137,61 @@ class VideoApi:
         logger.info(f'Video file {video_file} is being processed in the background...')
         state.broker.publish(ServerEvent.VIDEO_UPLOADED, {'uuid': video.uuid, 'title': video.title})
         return SeeOther(f'/video/{video.uuid}')
+
+    @define_async_api
+    async def upload_chunk(self, state: State, file_data: bytes, filename: str, chunk_index: int, total_chunks: int, chunk_uuid: str) -> WebResponse:
+        try:
+            # Create a unique filename for this upload session
+            upload_folder = ENVIRONMENT.upload_folder()
+            safe_filename = secure_filename(filename)
+            chunk_folder = upload_folder / f"chunks_{chunk_uuid}"
+            chunk_folder.mkdir(exist_ok=True)
+            
+            # Write the chunk to disk
+            chunk_file = chunk_folder / f"chunk_{chunk_index:06d}"
+            chunk_file.write_bytes(file_data)
+            
+            logger.info(f'Written chunk {chunk_index + 1}/{total_chunks} for file {safe_filename}')
+            
+            # Check if all chunks have been received
+            received_chunks = len(list(chunk_folder.glob("chunk_*")))
+            
+            if received_chunks == total_chunks:
+                # All chunks received, combine them
+                final_file_path = upload_folder / safe_filename
+                
+                # Handle duplicate filenames
+                counter = 1
+                while final_file_path.exists():
+                    name_parts = safe_filename.rsplit('.', 1)
+                    if len(name_parts) == 2:
+                        final_file_path = upload_folder / f"{name_parts[0]}_{counter}.{name_parts[1]}"
+                    else:
+                        final_file_path = upload_folder / f"{safe_filename}_{counter}"
+                    counter += 1
+                
+                # Combine chunks in order
+                with open(final_file_path, 'wb') as final_file:
+                    for i in range(total_chunks):
+                        chunk_file = chunk_folder / f"chunk_{i:06d}"
+                        if chunk_file.exists():
+                            final_file.write(chunk_file.read_bytes())
+                        else:
+                            raise ServerError(f"Missing chunk {i} for file {safe_filename}")
+                
+                # Clean up chunk files
+                shutil.rmtree(chunk_folder)
+                
+                logger.info(f'Successfully assembled file {final_file_path} from {total_chunks} chunks')
+                
+                # Process the complete file
+                return await self.upload_video(state, final_file_path)
+            else:
+                # More chunks expected
+                return Ok(f'Chunk {chunk_index + 1}/{total_chunks} received')
+        except Exception as e:
+            logger.error(f'Failed to process chunk {chunk_index} for file {filename}: {e}')
+            return WebResponse(status=500, response=f'Failed to process chunk {chunk_index + 1}')
 
     @define_async_api
     async def get_videos(self, state: State, count: int, offset: int) -> JsonResponse:
