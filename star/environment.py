@@ -35,6 +35,9 @@ class Environment:
     def transcript_folder(self) -> Path:
         return Path(GC.require('transcript_output_dir').get())
 
+    def data_folder(self) -> Path:
+        return Path(GC.require('data_folder').get())
+
 
 class Local(Environment):
     def port(self) -> int:

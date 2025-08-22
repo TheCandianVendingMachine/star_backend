@@ -74,8 +74,8 @@ class VideoApi:
                 raise InvalidFileFormat()
 
 
-            with TemporaryDirectory() as processing_directory:
-                audio_file = Path(processing_directory) /video_file.with_suffix('.aac').name
+            with TemporaryDirectory(dir=str(ENVIRONMENT.data_folder())) as processing_directory:
+                audio_file = Path(processing_directory) / video_file.with_suffix('.aac').name
                 logger.info(f'Extracting audio from {video_file} to {audio_file}')
                 await ffmpeg.acall(
                     str(audio_file),
