@@ -112,6 +112,9 @@ class VideoApi:
             VideoStore().link_transcription(state, video, db_transcript, transcript)
             VideoStore().update_video_state(state, video, VideoState.COMPLETED)
             logger.info(f'Video "{video.title}" transcription linked to DB')
+            logger.info(f'Removing temporary video file: {video_file}')
+            video_file.unlink()
+            logger.info(f'Video transcript complete and ready')
             state.broker.publish(
                 ServerEvent.VIDEO_TRANSCRIPT_COMPLETED, {'uuid': video.uuid, 'transcript': db_transcript.uuid, 'title': video.title}
             )
