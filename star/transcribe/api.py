@@ -112,9 +112,13 @@ class VideoApi:
             state.broker.publish(
                 ServerEvent.VIDEO_TRANSCRIPT_COMPLETED, {'uuid': video.uuid, 'transcript': db_transcript.uuid, 'title': video.title}
             )
+        except ServerError as e:
+            VideoStore().update_video_state(state, video, VideoState.FAILED)
+            logger.error(f'Failed to transcribe video "{video.title}":\n{e}')
         except Exception as e:
             VideoStore().update_video_state(state, video, VideoState.FAILED)
             logger.error(f'Failed to transcribe video "{video.title}":\n{e}')
+            raise e
 
     @define_async_api
     async def upload_video(self, state: State, video_file: Path) -> WebResponse:
