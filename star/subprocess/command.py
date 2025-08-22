@@ -40,7 +40,7 @@ class Command:
                 return str(cls.COMMAND_PATHS[0] / cls.COMMAND)
         command_path = can_call_as_command(
             cls.COMMAND,
-            ['./bin/', *[str(p) for p in cls.COMMAND_PATHS]]
+            ['./bin/', *[str(p) for p in cls.COMMAND_PATHS], *os.environ['PATH'].split(os.pathsep)],
         )
         if command_path:
             return command_path
