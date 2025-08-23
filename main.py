@@ -29,7 +29,7 @@ def production():
         ssl_ca_certs=ssl_ca_certs_path,
         log_config=log_config(),
         log_level='info',
-        workers=5
+        workers=8
     )
     print('thats all, folks')
 
